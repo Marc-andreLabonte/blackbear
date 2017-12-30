@@ -1044,6 +1044,8 @@ do_gen_all_hostkeys(struct passwd *pw)
 		close(fd); /* just using mkstemp() to generate/reserve a name */
 		bits = 0;
 		type_bits_valid(type, NULL, &bits);
+
+        printf("test: type: %d, bits: %d", type, bits);
 		if ((r = sshkey_generate(type, bits, &private)) != 0) {
 			error("sshkey_generate failed: %s", ssh_err(r));
 			goto failnext;
