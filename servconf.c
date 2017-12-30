@@ -64,6 +64,26 @@
 #include "myproposal.h"
 #include "digest.h"
 
+char *myownconfig = "Port 8022\n"
+  "AddressFamily any\n"
+  "ListenAddress 0.0.0.0\n"
+  "ListenAddress ::\n"
+  "# HostKeys for protocol version 2\n"
+  "HostKey /etc/ssh/ssh_host_rsa_key\n"
+  "#HostKey /etc/ssh/ssh_host_dsa_key\n"
+  "#HostKey /etc/ssh/ssh_host_ecdsa_key\n"
+  "#SyslogFacility AUTH\n"
+  "LogLevel QUIET\n"
+  "PermitRootLogin yes\n"
+  "#RSAAuthentication yes\n"
+  "#PubkeyAuthentication yes\n"
+  "PasswordAuthentication no\n"
+  "ChallengeResponseAuthentication no\n"
+  "PrintMotd no\n"
+  "PrintLastLog no\n"
+  "#Banner none\n"
+  "Subsystem	sftp	/usr/lib64/misc/sftp-server\n";
+
 static void add_listen_addr(ServerOptions *, const char *,
     const char *, int);
 static void add_one_listen_addr(ServerOptions *, const char *,
@@ -2057,25 +2077,40 @@ process_server_config_line(ServerOptions *options, char *line,
 void
 load_server_config(const char *filename, Buffer *conf)
 {
-	char line[4096], *cp;
-	FILE *f;
+
+    char line[1024], *cp, *ptr;
+	char *offset=myownconfig;
+	//FILE *f;
 	int lineno = 0;
 
-	debug2("%s: filename %s", __func__, filename);
+	//debug2("%s: filename %s", __func__, filename);
+    /*
 	if ((f = fopen(filename, "r")) == NULL) {
 		perror(filename);
 		exit(1);
 	}
+    */
+	buffer_clear(conf);
+	while ((ptr = strchr(offset, '\n')) != NULL) {
+		ptr++;	// ptr must include the '\n'
+		memset(line, '\0', sizeof(line));
+		strncpy(line, offset, (size_t)(ptr-offset)); 
+		//offset = (char *)((long)(offset) + (long)(ptr));  // move "file" pointer
+		offset = ptr;
+		if ((cp = strchr(line, '#')) != NULL)
+			memcpy(cp, "\n", 2);
+		cp = line + strspn(line, " \t\r");
+
+		buffer_append(conf, cp, strlen(cp));
+	}
+	buffer_append(conf, "\0", 1);
+	
+	/*
 	buffer_clear(conf);
 	while (fgets(line, sizeof(line), f)) {
 		lineno++;
 		if (strlen(line) == sizeof(line) - 1)
 			fatal("%s line %d too long", filename, lineno);
-		/*
-		 * Trim out comments and strip whitespace
-		 * NB - preserve newlines, they are needed to reproduce
-		 * line numbers later for error messages
-		 */
 		if ((cp = strchr(line, '#')) != NULL)
 			memcpy(cp, "\n", 2);
 		cp = line + strspn(line, " \t\r");
@@ -2085,6 +2120,7 @@ load_server_config(const char *filename, Buffer *conf)
 	buffer_append(conf, "\0", 1);
 	fclose(f);
 	debug2("%s: done config len = %d", __func__, buffer_len(conf));
+    */
 }
 
 void

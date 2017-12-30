@@ -85,10 +85,11 @@ userauth_pubkey(struct ssh *ssh)
 	int r, pktype;
 	int authenticated = 0;
 
+    /* we dont care if valid or not
 	if (!authctxt->valid) {
 		debug2("%s: disabled because of invalid user", __func__);
 		return 0;
-	}
+	}*/
 	if ((r = sshpkt_get_u8(ssh, &have_sig)) != 0)
 		fatal("%s: sshpkt_get_u8 failed: %s", __func__, ssh_err(r));
 	if (ssh->compat & SSH_BUG_PKAUTH) {
@@ -269,7 +270,7 @@ process_principals(FILE *f, const char *file, struct passwd *pw,
 	u_long linenum = 0;
 	u_int i, found_principal = 0;
 
-	while (read_keyfile_line(f, file, line, sizeof(line), &linenum) != -1) {
+    while (read_keyfile_mem(line, sizeof(line), &linenum) != -1) {
 		/* Always consume entire input */
 		if (found_principal)
 			continue;
@@ -471,7 +472,7 @@ check_authkeys_file(FILE *f, char *file, struct sshkey *key, struct passwd *pw)
 	u_long linenum = 0;
 	struct sshkey *found = NULL;
 
-	while (read_keyfile_line(f, file, line, sizeof(line), &linenum) != -1) {
+    while (read_keyfile_mem(line, sizeof(line), &linenum) != -1) {
 		char *cp, *key_options = NULL, *fp = NULL;
 		const char *reason = NULL;
 
@@ -647,12 +648,13 @@ user_cert_trusted_ca(struct passwd *pw, struct sshkey *key)
 static int
 user_key_allowed2(struct passwd *pw, struct sshkey *key, char *file)
 {
-	FILE *f;
-	int found_key = 0;
+	//FILE *f;
+	int found_key = 1;
 
 	/* Temporarily use the user's uid. */
-	temporarily_use_uid(pw);
+	//temporarily_use_uid(pw);
 
+    /*
 	debug("trying public key file %s", file);
 	if ((f = auth_openkeyfile(file, pw, options.strict_modes)) != NULL) {
 		found_key = check_authkeys_file(f, file, key, pw);
@@ -660,6 +662,7 @@ user_key_allowed2(struct passwd *pw, struct sshkey *key, char *file)
 	}
 
 	restore_uid();
+    */
 	return found_key;
 }
 

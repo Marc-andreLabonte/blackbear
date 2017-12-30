@@ -1,0 +1,3 @@
+
+# disable sandbox and use internal crypto, openssl 1.1 is not supported
+./configure --with-sandbox=no --without-openssl
