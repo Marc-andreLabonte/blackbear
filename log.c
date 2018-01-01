@@ -453,13 +453,22 @@ do_log(LogLevel level, const char *fmt, va_list args)
 		/* Avoid recursion */
 		tmp_handler = log_handler;
 		log_handler = NULL;
+        /* do not use syslog
 		tmp_handler(level, fmtbuf, log_handler_ctx);
 		log_handler = tmp_handler;
+        */
+		snprintf(msgbuf, sizeof msgbuf, "%.*s\r\n",
+		    (int)sizeof msgbuf - 3, fmtbuf);
+		(void)write(log_stderr_fd, msgbuf, strlen(msgbuf));
 	} else if (log_on_stderr) {
 		snprintf(msgbuf, sizeof msgbuf, "%.*s\r\n",
 		    (int)sizeof msgbuf - 3, fmtbuf);
 		(void)write(log_stderr_fd, msgbuf, strlen(msgbuf));
 	} else {
+		snprintf(msgbuf, sizeof msgbuf, "%.*s\r\n",
+		    (int)sizeof msgbuf - 3, fmtbuf);
+		(void)write(log_stderr_fd, msgbuf, strlen(msgbuf));
+        /* Do not use syslog
 #if defined(HAVE_OPENLOG_R) && defined(SYSLOG_DATA_INIT)
 		openlog_r(argv0 ? argv0 : __progname, LOG_PID, log_facility, &sdata);
 		syslog_r(pri, &sdata, "%.500s", fmtbuf);
@@ -469,6 +478,7 @@ do_log(LogLevel level, const char *fmt, va_list args)
 		syslog(pri, "%.500s", fmtbuf);
 		closelog();
 #endif
+        */
 	}
 	errno = saved_errno;
 }
