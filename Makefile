@@ -42,10 +42,9 @@ PATHS= -DSSHDIR=\"$(sysconfdir)\" \
 
 CC=gcc
 LD=gcc
-#CFLAGS=-g -O2 -pipe -Wall -Wpointer-arith -Wuninitialized -Wsign-compare -Wformat-security -Wsizeof-pointer-memaccess -Wno-pointer-sign -Wno-unused-result -fno-strict-aliasing -D_FORTIFY_SOURCE=2 -ftrapv -fno-builtin-memset -fstack-protector-strong -fPIE  
 CFLAGS=-g -O2 -pipe -Wall -Wpointer-arith -Wuninitialized -Wsign-compare -Wformat-security -Wsizeof-pointer-memaccess -Wno-pointer-sign -Wno-unused-result -fno-strict-aliasing -D_FORTIFY_SOURCE=2 -ftrapv -fno-builtin-memset -fstack-protector-strong -fPIE  -ggdb
 CPPFLAGS=-I. -I$(srcdir)  -D_XOPEN_SOURCE=600 -D_BSD_SOURCE -D_DEFAULT_SOURCE $(PATHS) -DHAVE_CONFIG_H
-LIBS=-lutil -lz  -lcrypt -lresolv
+LIBS=-lcrypto -ldl -lutil -lz  -lcrypt -lresolv
 K5LIBS=
 GSSLIBS=
 SSHLIBS=
@@ -594,7 +593,7 @@ tests interop-tests t-exec unit: regress-prep regress-binaries $(TARGETS)
 	TEST_SSH_CONCH="conch"; \
 	TEST_SSH_IPV6="yes" ; \
 	TEST_SSH_UTF8="yes" ; \
-	TEST_SSH_ECC="" ; \
+	TEST_SSH_ECC="yes" ; \
 	cd $(srcdir)/regress || exit $$?; \
 	$(MAKE) \
 		.OBJDIR="$${BUILDDIR}/regress" \

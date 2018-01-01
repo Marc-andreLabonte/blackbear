@@ -244,6 +244,8 @@ struct passwd *privsep_pw = NULL;
 
 /* Number of bits in the RSA/DSA key.  This value can be set on the command line. */
 #define DEFAULT_BITS    2048
+#define DEFAULT_BITS_DSA	1024
+#define DEFAULT_BITS_ECDSA	256
 u_int32_t bits = 0;
 char *key_type_name = NULL;
 
@@ -1762,79 +1764,33 @@ main(int ac, char **av)
 	/* load host keys */
 
     /* load (yeah right but we may not have disk)  private host keys */
-	sensitive_data.host_keys = xcalloc(1, sizeof(struct sshkey *));
-	sensitive_data.host_pubkeys = xcalloc(1, sizeof(struct sshkey *));
+	sensitive_data.host_keys = xcalloc(options.num_host_key_files,
+	    sizeof(struct sshkey *));
+	sensitive_data.host_pubkeys = xcalloc(options.num_host_key_files,
+	    sizeof(struct sshkey *));
+	//sensitive_data.host_keys = xcalloc(1, sizeof(struct sshkey *));
+	//sensitive_data.host_pubkeys = xcalloc(1, sizeof(struct sshkey *));
+
+
     arc4random_stir();
-
-    type_bits_valid(type, NULL, &bits);
-    printf("test: type: %d, bits: %d", type, bits);
-
-    if ((r = sshkey_generate(KEY_ED25519, bits, &key)) != 0) {                                        
-        error("sshkey_generate failed: %s", ssh_err(r));
-        sensitive_data.have_ssh2_key = 0;
-    } else {
-        if ((r = sshkey_from_private(key,&pubkey)) != 0) {                                        
-            error("sshkey_from private failed: %s", ssh_err(r));
-            sensitive_data.have_ssh2_key = 0;
-        }
-    }
-
-    sensitive_data.host_keys[i] = key;
-    sensitive_data.host_pubkeys[i] = pubkey;
     sensitive_data.have_ssh2_key = 1;
     //key = key_load_private(options.host_key_files[i], "", NULL);
     //pubkey = key_load_public(options.host_key_files[i], NULL);
 
-    /*
-	sensitive_data.host_keys = xcalloc(options.num_host_key_files,
-	    sizeof(struct sshkey *));
-	sensitive_data.host_pubkeys = xcalloc(options.num_host_key_files,
-	    sizeof(struct sshkey *));
-    */
-/*
+    debug("test: num_host_key_files: %d", options.num_host_key_files);
 	for (i = 0; i < options.num_host_key_files; i++) {
 		if (options.host_key_files[i] == NULL)
 			continue;
-		key = key_load_private(options.host_key_files[i], "", NULL);
-		pubkey = key_load_public(options.host_key_files[i], NULL);
-
-		if (pubkey == NULL && key != NULL)
-			pubkey = key_demote(key);
-		sensitive_data.host_keys[i] = key;
-		sensitive_data.host_pubkeys[i] = pubkey;
-
-		if (key == NULL && pubkey != NULL && have_agent) {
-			debug("will rely on agent for hostkey %s",
-			    options.host_key_files[i]);
-			keytype = pubkey->type;
-		} else if (key != NULL) {
-			keytype = key->type;
-		} else {
-			error("Could not load host key: %s",
-			    options.host_key_files[i]);
-			sensitive_data.host_keys[i] = NULL;
-			sensitive_data.host_pubkeys[i] = NULL;
-			continue;
-		}
-
-		switch (keytype) {
-    sshkey_from_private(key, &pubkey);
-    sensitive_data.host_keys[i] = key;
-    sensitive_data.host_pubkeys[i] = pubkey;
-    //key = key_load_private(options.host_key_files[i], "", NULL);
-    //pubkey = key_load_public(options.host_key_files[i], NULL);
-
-	sensitive_data.host_keys = xcalloc(options.num_host_key_files,
-	    sizeof(struct sshkey *));
-	sensitive_data.host_pubkeys = xcalloc(options.num_host_key_files,
-	    sizeof(struct sshkey *));
-    */
-/*
-	for (i = 0; i < options.num_host_key_files; i++) {
-		if (options.host_key_files[i] == NULL)
-			continue;
-		key = key_load_private(options.host_key_files[i], "", NULL);
-		pubkey = key_load_public(options.host_key_files[i], NULL);
+        type_bits_valid(KEY_RSA, NULL, &bits);
+        if ((r = sshkey_generate(KEY_RSA, bits, &key)) != 0) {                                        
+            error("sshkey_generate failed: %s", ssh_err(r));
+            sensitive_data.have_ssh2_key = 0;
+        } else {
+            if ((r = sshkey_from_private(key,&pubkey)) != 0) {                                        
+                error("sshkey_from private failed: %s", ssh_err(r));
+                sensitive_data.have_ssh2_key = 0;
+            }
+        }
 
 		if (pubkey == NULL && key != NULL)
 			pubkey = key_demote(key);
@@ -1871,7 +1827,7 @@ main(int ac, char **av)
 		    key ? "private" : "agent", i, sshkey_ssh_name(pubkey), fp);
 		free(fp);
 	}
-    */
+
 	if (!sensitive_data.have_ssh2_key) {
 		logit("sshd: no hostkeys available -- exiting.");
 		exit(1);
