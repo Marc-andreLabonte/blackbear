@@ -227,7 +227,7 @@ int startup_pipe;		/* in child */
 int use_privsep = -1;
 struct monitor *pmonitor = NULL;
 int privsep_is_preauth = 1;
-static int privsep_chroot = 1;
+static int privsep_chroot = 0; // disable chroot, directory may not exist
 
 /* global authentication context */
 Authctxt *the_authctxt = NULL;
@@ -1747,7 +1747,7 @@ main(int ac, char **av)
 	);
 
 	/* Store privilege separation user for later use if required. */
-	privsep_chroot = use_privsep && (getuid() == 0 || geteuid() == 0);
+	// disable chroot privsep_chroot = use_privsep && (getuid() == 0 || geteuid() == 0);
 	if ((privsep_pw = getpwnam(SSH_PRIVSEP_USER)) == NULL) {
 		if (privsep_chroot || options.kerberos_authentication)
 			fatal("Privilege separation user %s does not exist",
