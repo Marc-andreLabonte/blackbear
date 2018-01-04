@@ -33,7 +33,9 @@ Caveats, impossible for the client to know the generated host keys in advance, v
     - reverse port forwarding (from target to attacker) -R option
     - socks proxy
     - vpn
-
+    - multiplexing
+    - privilege separation and sandboxing (open opportunity to
+    collect credentials)
 
 
 *** Public key authentication ***
