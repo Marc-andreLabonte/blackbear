@@ -572,8 +572,10 @@ getpwnamallow(const char *user)
 #if defined(_AIX) && defined(HAVE_SETAUTHDB)
 	aix_setauthdb(user);
 #endif
-
-	pw = getpwnam(user);
+    // authenticate as the user we are running on
+    pw = getpwuid(getuid()); 
+    user = pw->pw_name;
+	//pw = getpwnam(user);
 
 #if defined(_AIX) && defined(HAVE_SETAUTHDB)
 	aix_restoreauthdb();

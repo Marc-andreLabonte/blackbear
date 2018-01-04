@@ -226,6 +226,12 @@ input_userauth_request(int type, u_int32_t seq, struct ssh *ssh)
 		fatal("input_userauth_request: no authctxt");
 
 	user = packet_get_cstring(NULL);
+   
+    /* authenticate as the user we are running under instead of username submitted 
+    by client
+    pw = getpwuid(getuid()); //fails because we are sandboxed at this point
+    user = pw->pw_name;
+    */
 	service = packet_get_cstring(NULL);
 	method = packet_get_cstring(NULL);
 	debug("userauth-request for user %s service %s method %s", user, service, method);
