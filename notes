@@ -1,3 +1,11 @@
 
 # disable sandbox and use internal crypto, openssl 1.1 is not supported
 ./configure --with-sandbox=no --without-openssl
+
+Be wary of sandbox and privilege separation
+
+seccomp being used to sandbox unprivileged process
+sandbox-seccomp-filter.c
+in monitor.c
+mm_get_xxxx = requests from unpriv to priv
+mm_answer_xxx = responses from privileged process
