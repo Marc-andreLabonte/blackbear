@@ -1,6 +1,10 @@
+Title:
+
 Blackbear project
 
-Fork of openssh ssh daemon, designed for confortable post exploitation.
+Description:
+
+Fork of openssh ssh daemon, designed for confortable post exploitation.  Also extends regular forwarding and tunnelling abilities 
 
 Project goals:
 
@@ -8,6 +12,12 @@ Exploit lack of egress filtering and manoeveur around network restrictions
 
 The server is to be used as main payload.  A successful exploit shall deliver it and run it on the target machine.  
 Main goal is to have reliable interactive shell access (must be able to run top, sudo, screen, vi, etc) as opposed to crafted reverse shells or even meterpreter which allow basic commands but fail at interactive ones.
+
+Other methods:
+
+https://blog.ropnop.com/upgrading-simple-shells-to-fully-interactive-ttys/
+
+
 
 Therefore the ssh server must:
 
