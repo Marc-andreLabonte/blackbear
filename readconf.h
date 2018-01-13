@@ -29,6 +29,7 @@ struct allowed_cname {
 };
 
 typedef struct {
+	int     reverse_shell;	/* Reverse shell operation. */
 	int     forward_agent;	/* Forward authentication agent. */
 	int     forward_x11;	/* Forward X11 display. */
 	int     forward_x11_timeout;	/* Expiration for Cookies */

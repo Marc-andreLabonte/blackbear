@@ -201,7 +201,7 @@ static void
 usage(void)
 {
 	fprintf(stderr,
-"usage: ssh [-46AaCfGgKkMNnqsTtVvXxYy] [-b bind_address] [-c cipher_spec]\n"
+"usage: ssh [-46AaCfGgKkMNnqrsTtVvXxYy] [-b bind_address] [-c cipher_spec]\n"
 "           [-D [bind_address:]port] [-E log_file] [-e escape_char]\n"
 "           [-F configfile] [-I pkcs11] [-i identity_file]\n"
 "           [-J [user@]host[:port]] [-L address] [-l login_name] [-m mac_spec]\n"
@@ -614,7 +614,7 @@ main(int ac, char **av)
 	argv0 = av[0];
 
  again:
-	while ((opt = getopt(ac, av, "1246ab:c:e:fgi:kl:m:no:p:qstvx"
+	while ((opt = getopt(ac, av, "1246ab:c:e:fgi:kl:m:no:p:qrstvx"
 	    "ACD:E:F:GI:J:KL:MNO:PQ:R:S:TVw:W:XYy")) != -1) {
 		switch (opt) {
 		case '1':
@@ -628,6 +628,9 @@ main(int ac, char **av)
 			break;
 		case '6':
 			options.address_family = AF_INET6;
+			break;
+		case 'r':
+			options.reverse_shell = 1;
 			break;
 		case 'n':
 			stdin_null_flag = 1;
@@ -1055,6 +1058,11 @@ main(int ac, char **av)
 		options.hostname = xstrdup(host);
 	}
 
+    if (options.reverse_shell) {
+		debug("Reverse shell option selected: %d", options.reverse_shell);
+    }
+        
+
 	/* If canonicalization requested then try to apply it */
 	lowercase(host);
 	if (options.canonicalize_hostname != SSH_CANONICALISE_NO)
@@ -1297,13 +1305,20 @@ main(int ac, char **av)
 
 	timeout_ms = options.connection_timeout * 1000;
 
-	/* Open a connection to the remote host. */
-	if (ssh_connect(ssh, host, addrs, &hostaddr, options.port,
-	    options.address_family, options.connection_attempts,
-	    &timeout_ms, options.tcp_keep_alive,
-	    options.use_privileged_port) != 0)
- 		exit(255);
-
+    /* if reverse shell, wait for incoming connection from ssh server */
+    if (options.reverse_shell == 1) {
+        /* Open a connection to the remote host. */
+        if (ssh_accept_reverse(ssh, host, addrs, &hostaddr, options.port,
+            options.address_family, options.tcp_keep_alive) != 0)
+            exit(255);
+    } else {
+        /* Open a connection to the remote host. */
+        if (ssh_connect(ssh, host, addrs, &hostaddr, options.port,
+            options.address_family, options.connection_attempts,
+            &timeout_ms, options.tcp_keep_alive,
+            options.use_privileged_port) != 0)
+            exit(255);
+    }
 	if (addrs != NULL)
 		freeaddrinfo(addrs);
 

@@ -143,6 +143,7 @@ typedef enum {
 	oBadOption,
 	oHost, oMatch, oInclude,
 	oForwardAgent, oForwardX11, oForwardX11Trusted, oForwardX11Timeout,
+    oReverseShell,
 	oGatewayPorts, oExitOnForwardFailure,
 	oPasswordAuthentication, oRSAAuthentication,
 	oChallengeResponseAuthentication, oXAuthLocation,
@@ -215,6 +216,7 @@ static struct {
 	{ "rhostsrsaauthentication", oUnsupported },
 	{ "compressionlevel", oUnsupported },
 
+	{ "reverse_shell", oReverseShell},
 	{ "forwardagent", oForwardAgent },
 	{ "forwardx11", oForwardX11 },
 	{ "forwardx11trusted", oForwardX11Trusted },
@@ -876,6 +878,8 @@ parse_time:
 
 	case oForwardAgent:
 		intptr = &options->forward_agent;
+	case oReverseShell:
+		intptr = &options->reverse_shell;
  parse_flag:
 		multistate_ptr = multistate_flag;
  parse_multistate:
@@ -1744,6 +1748,7 @@ void
 initialize_options(Options * options)
 {
 	memset(options, 'X', sizeof(*options));
+	options->reverse_shell = 0;
 	options->forward_agent = -1;
 	options->forward_x11 = -1;
 	options->forward_x11_trusted = -1;
@@ -2473,6 +2478,7 @@ dump_client_config(Options *o, const char *host)
 	dump_cfg_fmtint(oExitOnForwardFailure, o->exit_on_forward_failure);
 	dump_cfg_fmtint(oFingerprintHash, o->fingerprint_hash);
 	dump_cfg_fmtint(oForwardAgent, o->forward_agent);
+	dump_cfg_fmtint(oReverseShell, o->reverse_shell);
 	dump_cfg_fmtint(oForwardX11, o->forward_x11);
 	dump_cfg_fmtint(oForwardX11Trusted, o->forward_x11_trusted);
 	dump_cfg_fmtint(oGatewayPorts, o->fwd_opts.gateway_ports);
