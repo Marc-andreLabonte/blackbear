@@ -400,6 +400,117 @@ timeout_connect(int sockfd, const struct sockaddr *serv_addr,
 }
 
 /*
+ * Bind the socket and accept a connection from server for reverse shell operation
+ */
+int
+ssh_accept_reverse(struct ssh *ssh, const char *host, struct addrinfo *ai,
+    struct sockaddr_storage *hostaddr, u_short port, int family,
+    int want_keepalive)
+{
+	int on = 1;
+    int needpriv = 0;
+	int sock = -1;
+	int peersock = -1;
+    int r;
+	char ntop[NI_MAXHOST], strport[NI_MAXSERV];
+
+    struct sockaddr from;
+    socklen_t fromlen = sizeof(from);
+    memset(&from, 0, sizeof(from));
+
+
+    
+	memset(ntop, 0, sizeof(ntop));
+	memset(strport, 0, sizeof(strport));
+
+    if (ai->ai_family != AF_INET &&
+        ai->ai_family != AF_INET6)
+        fatal("Address family must be AF_INET or AF_INET6");
+
+    
+    if (getnameinfo(ai->ai_addr, ai->ai_addrlen,
+        ntop, sizeof(ntop), strport, sizeof(strport),
+        NI_NUMERICHOST|NI_NUMERICSERV) != 0) {
+        fatal("%s: getnameinfo before bind failed", __func__);
+    }
+    debug("Binding to %.200s [%.100s] port %s.",
+        host, ntop, strport);
+
+    /* Create a socket for connecting. */
+    sock = ssh_create_socket(needpriv, ai);
+    if (sock < 0)
+        /* Any error is already output */
+        debug("can't create socket");
+    
+    if ( set_reuseaddr(sock) != 0 )
+        fatal("can't set socket to reuse");
+
+    if (bind(sock, ai->ai_addr, ai->ai_addrlen) >= 0) {
+        /* Successful bind. */
+        memcpy(hostaddr, ai->ai_addr, ai->ai_addrlen);
+    } else {
+        debug("cannot bind to address %s port %s: %s",
+            ntop, strport, strerror(errno));
+        close(sock);
+        sock = -1;
+    }
+
+
+
+    if (listen(sock, 5) < 0) {
+        /* fail to listen. */
+        debug("cannot listen to address %s port %s: %s",
+            ntop, strport, strerror(errno));
+        close(sock);
+        sock = -1;
+    }
+
+    sock = accept(sock, &from, &fromlen);
+    if (sock < 0) {
+        /* Successful accept. */
+        debug("fail to accept, adress: %s port %s: %s",
+            ntop, strport, strerror(errno));
+        close(sock);
+        sock = -1;
+    } else {
+        memcpy(hostaddr, &from, fromlen); 
+    }
+   
+        
+
+	/* Return failure if we didn't get a successful connection. */
+	if (sock == -1) {
+		error("ssh: failed to receive connection: %s port %s: %s",
+		    host, strport, strerror(errno));
+		return (-1);
+	}
+
+    /* Get the address in ascii. */
+    if ((r = getnameinfo((struct sockaddr *)&from, fromlen, ntop,
+        sizeof(ntop), strport, sizeof(strport), 
+        NI_NUMERICHOST|NI_NUMERICSERV)) != 0) {
+        error("%s: getnameinfo from accept failed: %s", __func__,
+            ssh_gai_strerror(r));
+        return (-1);
+    }
+
+	debug("Received connection from: %s port %s.",
+        ntop, strport);
+
+	/* Set SO_KEEPALIVE if requested. */
+	if (want_keepalive &&
+	    setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, (void *)&on,
+	    sizeof(on)) < 0)
+		error("setsockopt SO_KEEPALIVE: %.100s", strerror(errno));
+
+	/* Set the connection. */
+	if (ssh_packet_set_connection(ssh, sock, sock) == NULL)
+		return -1; /* ssh_packet_set_connection logs error */
+
+        return 0;
+}
+
+/*
  * Opens a TCP/IP connection to the remote server on the given host.
  * The address of the remote host will be returned in hostaddr.
  * If port is 0, the default port will be used.  If needpriv is true,
