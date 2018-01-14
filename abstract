@@ -4,40 +4,45 @@ Blackbear project
 
 Description:
 
-Fork of openssh ssh daemon, designed for confortable post exploitation.  Also extends regular forwarding and tunnelling abilities 
+Fork of openssh ssh daemon, designed for confortable post exploitation.  Also extends regular forwarding and tunneling abilities 
 
 Project goals:
 
-Exploit lack of egress filtering and manoeveur around network restrictions
+Exploit loose (lack of) egress filtering and maneuver around network restrictions.
 
-The server is to be used as main payload.  A successful exploit shall deliver it and run it on the target machine.  
-Main goal is to have reliable interactive shell access (must be able to run top, sudo, screen, vi, etc) as opposed to crafted reverse shells or even meterpreter which allow basic commands but fail at interactive ones.
+The server is to be used as main payload.  A successful exploit shall deliver it and run it on the target machine.  The server will the establish a TCP connection to the client providing a reverse SSH shell.  It can also act as a regular SSH server and listen for an incoming connection.
+Also it is to provide reliable interactive shell access (must be able to run top, sudo, screen, vi, etc) as opposed to crafted reverse shells or even meterpreter which allow basic commands but fail at interactive ones.
 
-Other methods:
+Other interactive shell methods:
 
 https://blog.ropnop.com/upgrading-simple-shells-to-fully-interactive-ttys/
 
 
+Therefore the BlackBear ssh server must:
 
-Therefore the ssh server must:
-
-- be able to run under any user account, must not require root or elevated privileges. 
+- be able to run under any user account, must not require root, special capabilities  or elevated privileges. 
 - server must not touch the disk, host keys shall be generated on the fly (insecure), authorized keys and configuration must be encoded within the binary, no logging.  Only /dev/urandom and other required device files shall be used.
-- server will grant access to the user account it is running on even if:
-    - client doesn't know which username string to send (www-data vs www)
-    - shell access is denied for that account, e.g. shell set to /bin/false or account disabled by configuration
+- server will grant access to the user account it is running on even if, ignore username string sent by client.
+- shell shall always be set to /bin/sh.  This would allow access to accounts that may be otherwise disabled.  For example, this would allow access to the www-data account whose shell is usually set to /bin/false or /sbin/nologin.
 - break server listen and accept connections paradigm.  Server must be able to establish connections and client must be able to listen to incoming connections from server.  Needed for reverse ssh shells.
 - leverage ssh tunneling, socks proxy and vpn support
-- spawn a 'reverse socks proxy' e.g. socks proxy listening on target side that allow applications to communicate with services on the attacker side.
-- Bonus: create a vpn with unpriviledged target side
 
 
-Caveats, impossible for the client to know the generated host keys in advance, vulnerable to man in the middle attacks.  This might be mitigated by some signature scheme, need work.
+Bonus goals: 
+
+- create a vpn while running unpriviledged on target side
+- Portable beyond x86-64, should run on arm (Linux & Android), i386, mips
+
+
+
+Caveats:
+
+- impossible for the client to know the generated host keys in advance, vulnerable to man in the middle attacks.  This might be mitigated by some signature scheme, need work.
 
 *** prerequisites ***
 
 
-- Familiarity with well known ssh tunneling functions:
+- Familiarity with well known ssh tunneling functions is expected:
 
     - port forwarding (from attacker to target) -L option
     - reverse port forwarding (from target to attacker) -R option
@@ -48,81 +53,3 @@ Caveats, impossible for the client to know the generated host keys in advance, v
     collect credentials)
 
 
-*** Public key authentication ***
-
-Authorized_keys reading by server happen in svr-authpubkey.c.
-Need to provide buffer (presumably from header file) for 
-checkpubkey() function to parse instead of opening a file on disk
-
-checkpubkey in svr-authpubkey.c actually checks the file and read from it.  Replace file check with static keys in header file
-
-FIXME: had to disable public key option parsing, see svr-authpubkey.c line 344.  Need to rewrite svr_add_pubkey_option to use string array instead of authorized_key file
-
-*** Server host key authentication ***
-
-Goes from load_all_hostkeys(), to loadhostkey() to readhostkey()
-
-Fails with strings too long when run from user account.  buf_getstring() does not get the lenght of the key,
-buf
-#0  0x000000000040357e in buf_getstring ()
-#1  0x000000000040448a in buf_get_priv_key ()
-#2  0x000000000040bce6 in readhostkey ()
-#3  0x0000000000411128 in loadhostkey ()
-#4  0x00000000004117ed in load_all_hostkeys ()
-#5  0x0000000000411dbb in commonsetup ()
-#6  0x0000000000411e73 in main_noinetd ()
-#7  0x0000000000402958 in main ()
-
-Wrong key format, different from regular ssh server.
-
-Solution, replace readhostkey() call by host key generation function.  Look at -R option
-
--R option sets the delay_hostkey boolean, svr-runopts.c and svr-kex uses it.
-
-send_msg_kexdh_reply in svr-kex check delay and if set run svr_ensure_hostkey()
-
-if keys are missing svr_ensure_hostkey call signkey_generate (in gensignkey.c) with key type and tmp filename as arguments
-
-suggestion, use buffer instead of filename
-
-the new_sign_key() function in signkey.c creates the buffer to hold the key
-
-use gen_type_priv_key() function to get key in buffer, 
-
-new function, signkey_mem_generate() in gensignkey.c, to be called in lieu of readhostkey by loadhostkey in svr-runopts.c
-
-*** Authorization bypass ***
-
-- Access shall be granted to the user account the server is running on, no matter the username the client is sending.  
-
-- Shell shall always be set to /bin/sh.  This would allow access to accounts that may be otherwise disable.  For example, this would allow access to the apache account whose shell is usually set to /bin/false or /sbin/nologin.
-
-- Therefore, authorization mecanism need to be removed 
-
-Tests on user accounts and shell access are made by the checkusername() function in svr-auth.c
-
-FIXME, need to figure out a way to set the requested user to the user the process is running on.  Requesting a bogus user causes failure:
-
-[7852] May 06 12:03:45 Pubkey auth succeeded for 'm00ooo' with key md5 e5:65:3a:f8:aa:56:b8:42:5a:f7:00:3c:58:37:c6:d4 from ::1:37908
-[7852] May 06 12:03:46 Exit (m00ooo): Disconnect received
-[7948] May 06 12:03:51 Child connection from ::1:37909
-[7948] May 06 12:03:56 Pubkey auth succeeded for 'root' with key md5 e5:65:3a:f8:aa:56:b8:42:5a:f7:00:3c:58:37:c6:d4 from ::1:37909
-[7948] May 06 12:03:56 Exit (root): chown(/dev/pts/4, 0, 5) failed: Operation not permitted
-[7948] May 06 12:03:56 chown /dev/pts/4 0 0 failed: Operation not permitted
-[7975] May 06 12:04:16 Child connection from ::1:37910
-[7975] May 06 12:04:21 Pubkey auth succeeded for '(null)' with key md5 e5:65:3a:f8:aa:56:b8:42:5a:f7:00:3c:58:37:c6:d4 from ::1:37910
-Aiee, segfault! You should probably report this as a bug to the developer
-
-function send_msg_userauth_success() is executed if pub key auth succeeds.  Boolean ses.authstate.authdone is set to 1 (True)
-
-That boolean is checked for messages types in process-packet.c.  See ssh.h for packet types.
-
-*** reverse shell operation ***
-
-Even in reverse shell mode, the client which is now on the receiving end of the tcp connection still verify the host key of the server.  Only the direction of the tcp handshake is changed, everything else goes on as usual.
-
-fct connect_remote() called in cli-main.c, presumably establish connection, need to be made available to server code.
-
-fct blackbear_listen() called in svr-main.c start listening for connections, need to be made available to client code.
-
-both functions defined in netio.c
