@@ -1,5 +1,6 @@
 buildpkg.sh
 config.h
+config.log
 config.h.in
 config.status
 configure
