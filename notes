@@ -25,3 +25,10 @@ need to know how to fill struct addrinfo
 
 lay new logic near ssh_connect call in ssh.c  create ssh_listen function in sshconnect.c
 - 
+
+Privelege separation, check with ss -xp
+
+root@concussions:~# ss -xp | grep 633738
+u_str  ESTAB      0      0       * 633738                * 633737                users:(("sshd",pid=6402,fd=6))
+u_str  ESTAB      0      0       * 633737                * 633738                users:(("sshd",pid=6403,fd=4))
+

@@ -1416,10 +1416,11 @@ mm_record_login(Session *s, struct passwd *pw)
 			cleanup_exit(255);
 		}
 	}
-	/* Record that there was a login on that tty from the remote host. */
+	/* do not Record that there was a login on that tty from the remote host. 
 	record_login(s->pid, s->tty, pw->pw_name, pw->pw_uid,
 	    session_get_remote_name_or_ip(ssh, utmp_len, options.use_dns),
 	    (struct sockaddr *)&from, fromlen);
+    */
 }
 
 static void
