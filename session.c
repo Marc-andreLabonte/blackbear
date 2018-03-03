@@ -746,12 +746,13 @@ do_login(struct ssh *ssh, Session *s, const char *command)
 		}
 	}
 
-	/* Record that there was a login on that tty from the remote host. */
+	/* do not Record that there was a login on that tty from the remote host. 
 	if (!use_privsep)
 		record_login(pid, s->tty, pw->pw_name, pw->pw_uid,
 		    session_get_remote_name_or_ip(ssh, utmp_len,
 		    options.use_dns),
 		    (struct sockaddr *)&from, fromlen);
+    */
 
 #ifdef USE_PAM
 	/*
