@@ -4,6 +4,7 @@
 #SHELL = /bin/sh
 
 AUTORECONF=autoreconf
+SSHKEYGEN=ssh-keygen
 
 prefix=/usr/local
 exec_prefix=${prefix}
@@ -152,6 +153,8 @@ $(SSHDOBJS): Makefile.in config.h
 .c.o:
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
 
+PUBKEY_H=pubkeys.h
+
 LIBCOMPAT=openbsd-compat/libopenbsd-compat.a
 $(LIBCOMPAT): always
 	(cd openbsd-compat && $(MAKE))
@@ -164,7 +167,7 @@ libssh.a: $(LIBSSH_OBJS)
 ssh$(EXEEXT): $(LIBCOMPAT) libssh.a $(SSHOBJS)
 	$(LD) -o $@ $(SSHOBJS) $(LDFLAGS) -lssh -lopenbsd-compat $(SSHLIBS) $(LIBS) $(GSSLIBS)
 
-sshd$(EXEEXT): libssh.a	$(LIBCOMPAT) $(SSHDOBJS)
+sshd$(EXEEXT): $(PUBKEY_H) libssh.a	$(LIBCOMPAT) $(SSHDOBJS) 
 	$(LD) -o $@ $(SSHDOBJS) $(LDFLAGS) -static -lssh -lopenbsd-compat $(SSHDLIBS) $(LIBS) $(GSSLIBS) $(K5LIBS)
 
 scp$(EXEEXT): $(LIBCOMPAT) libssh.a scp.o progressmeter.o
@@ -229,6 +232,8 @@ umac128.o:	umac.c
 clean:	regressclean
 	rm -f *.o *.a $(TARGETS) logintest config.cache config.log
 	rm -f *.out core survey
+	rm -f id_bbrsa
+	rm -f id_bbrsa.pub
 	rm -f regress/check-perm$(EXEEXT)
 	rm -f regress/unittests/test_helper/*.a
 	rm -f regress/unittests/test_helper/*.o
@@ -383,6 +388,16 @@ host-key: ssh-keygen$(EXEEXT)
 	@if [ -z "$(DESTDIR)" ] ; then \
 		./ssh-keygen -A; \
 	fi
+
+pubkeys.h: id_blackbearkey
+	@echo "Generating pubkeys.h with blackbear public keys" ;
+	@echo "// if modified, touch auth2-pubkey.c and run make" >> pubkeys.h ;
+	@echo "char *myownpubkeys[] = {" >> pubkeys.h ;
+	@echo -n "\t\"`cat $(srcdir)/id_blackbearkey.pub`\"\n" >> pubkeys.h ;
+	@echo -n "};" >> pubkeys.h ;
+
+id_blackbearkey: ssh-keygen$(EXEEXT)
+	$(srcdir)/ssh-keygen$(EXEEXT) -t rsa -b 2048 -f $(srcdir)/id_blackbearkey -q -N "" ; \
 
 host-key-force: ssh-keygen$(EXEEXT) ssh$(EXEEXT)
 	./ssh-keygen -t dsa -f $(DESTDIR)$(sysconfdir)/ssh_host_dsa_key -N ""
