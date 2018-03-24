@@ -1,4 +1,6 @@
 buildpkg.sh
+.gdb_history
+id_*
 config.h
 config.log
 config.h.in
