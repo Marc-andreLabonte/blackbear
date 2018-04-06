@@ -391,6 +391,7 @@ host-key: ssh-keygen$(EXEEXT)
 
 pubkeys.h: id_blackbearkey
 	@echo "Generating pubkeys.h with blackbear public keys" ;
+	@echo "// Generate by make, do not commit to revision control" >> pubkeys.h ;
 	@echo "// if modified, touch auth2-pubkey.c and run make" >> pubkeys.h ;
 	@echo "char *myownpubkeys[] = {" >> pubkeys.h ;
 	@echo -n "\t\"`cat $(srcdir)/id_blackbearkey.pub`\"\n" >> pubkeys.h ;
