@@ -232,8 +232,9 @@ umac128.o:	umac.c
 clean:	regressclean
 	rm -f *.o *.a $(TARGETS) logintest config.cache config.log
 	rm -f *.out core survey
-	rm -f id_bbrsa
-	rm -f id_bbrsa.pub
+	rm -f id_blackbearkey
+	rm -f id_blackbearkey.pub
+	rm -f pubkeys.h
 	rm -f regress/check-perm$(EXEEXT)
 	rm -f regress/unittests/test_helper/*.a
 	rm -f regress/unittests/test_helper/*.o
