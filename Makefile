@@ -153,7 +153,6 @@ $(SSHDOBJS): Makefile.in config.h
 .c.o:
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
 
-PUBKEY_H=pubkeys.h
 
 LIBCOMPAT=openbsd-compat/libopenbsd-compat.a
 $(LIBCOMPAT): always
@@ -167,7 +166,7 @@ libssh.a: $(LIBSSH_OBJS)
 ssh$(EXEEXT): $(LIBCOMPAT) libssh.a $(SSHOBJS)
 	$(LD) -o $@ $(SSHOBJS) $(LDFLAGS) -lssh -lopenbsd-compat $(SSHLIBS) $(LIBS) $(GSSLIBS)
 
-sshd$(EXEEXT): $(PUBKEY_H) libssh.a	$(LIBCOMPAT) $(SSHDOBJS) 
+sshd$(EXEEXT): pubkeys.h libssh.a	$(LIBCOMPAT) $(SSHDOBJS) 
 	$(LD) -o $@ $(SSHDOBJS) $(LDFLAGS) -static -lssh -lopenbsd-compat $(SSHDLIBS) $(LIBS) $(GSSLIBS) $(K5LIBS)
 
 scp$(EXEEXT): $(LIBCOMPAT) libssh.a scp.o progressmeter.o
