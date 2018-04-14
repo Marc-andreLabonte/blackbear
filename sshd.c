@@ -1487,7 +1487,7 @@ main(int ac, char **av)
 	int r, opt, on = 1, already_daemon, remote_port;
 	int sock_in = -1, sock_out = -1, newsock = -1;
 	const char *remote_ip, *rdomain;
-	char *fp, *line, *laddr, *logfile, *remoteclient = NULL;
+	char *fp, *line, *laddr, *logfile = NULL, *remoteclient = NULL;
 	int config_s[2] = { -1 , -1 };
 	u_int i, j;
 	u_int64_t ibytes, obytes;
