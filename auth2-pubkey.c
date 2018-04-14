@@ -461,19 +461,6 @@ match_principals_command(struct passwd *user_pw, const struct sshkey *key)
 	return found_principal;
 }
 
-int
-read_keyfile_mem(char *buf, size_t bufsz, u_long *lineno)
-{
-    if (myownpubkeys[*lineno] != NULL ){
-        strncpy(buf, myownpubkeys[*lineno], bufsz);
-        (*lineno)++;
-        return 0;
-    } else {
-        return -1;
-    }
-
-}
-
 
 
 /*
