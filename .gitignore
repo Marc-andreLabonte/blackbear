@@ -28,6 +28,7 @@ ssh-keyscan
 ssh-keysign
 ssh-pkcs11-helper
 sshd
+Makefile
 !regress/misc/fuzz-harness/Makefile
 tests
 patches
