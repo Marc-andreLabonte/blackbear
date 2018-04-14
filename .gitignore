@@ -1,7 +1,8 @@
 buildpkg.sh
 .gdb_history
 id_*
-pubkeys.h
+.depend
+pubkeys.c
 config.h
 config.log
 config.h.in
