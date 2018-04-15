@@ -207,6 +207,7 @@ usage(void)
 "           [-J [user@]host[:port]] [-L address] [-l login_name] [-m mac_spec]\n"
 "           [-O ctl_cmd] [-o option] [-p port] [-Q query_option] [-R address]\n"
 "           [-S ctl_path] [-W host:port] [-w local_tun[:remote_tun]]\n"
+"           [-r listen address (reverse shell operation)]\n"
 "           destination [command]\n"
 	);
 	exit(255);
@@ -1307,7 +1308,7 @@ main(int ac, char **av)
 
     /* if reverse shell, wait for incoming connection from ssh server */
     if (options.reverse_shell == 1) {
-        /* Open a connection to the remote host. */
+        /* listen for an incoming connection. */
         if (ssh_accept_reverse(ssh, host, addrs, &hostaddr, options.port,
             options.address_family, options.tcp_keep_alive) != 0)
             exit(255);
