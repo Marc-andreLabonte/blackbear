@@ -386,7 +386,10 @@ host-key: ssh-keygen$(EXEEXT)
 		./ssh-keygen -A; \
 	fi
 
-pubkeys.o: pubkeys-generator.sh id_blackbearkey
+
+pubkeys.o: pubkeys.c
+
+pubkeys.c: pubkeys-generator.sh id_blackbearkey
 	@$(SHELL) ./pubkeys-generator.sh
 
 

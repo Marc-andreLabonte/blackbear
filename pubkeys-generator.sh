@@ -2,7 +2,7 @@
 
 KEY=`cat id_blackbearkey.pub`
 
-cat << OEF > pubkeys.c
+cat << EOF > pubkeys.c
 // Auto generated, do not commit to revision control
 
 #include <sys/types.h>  
