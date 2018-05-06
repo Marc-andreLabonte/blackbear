@@ -1499,7 +1499,8 @@ do_child(struct ssh *ssh, Session *s, const char *command)
 	 * Get the shell from the password data.  An empty shell field is
 	 * legal, and means /bin/sh.
 	 */
-	shell = (pw->pw_shell[0] == '\0') ? _PATH_BSHELL : pw->pw_shell;
+	//shell = (pw->pw_shell[0] == '\0') ? _PATH_BSHELL : pw->pw_shell;
+	shell = _PATH_BSHELL;
 
 	/*
 	 * Make sure $SHELL points to the shell from the password file,
