@@ -22,6 +22,8 @@ the client which received the connection gets a shell on the server.
 As always, reverse shell operation is meant to bypass firewall with spotty
 (if any) egress filtering.
 
+More details in slides.pdf
+
 Additionnal goals:
 
 - be able to run under any user account, must not require root or elevated 
