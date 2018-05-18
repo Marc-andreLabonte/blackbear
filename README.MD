@@ -1,6 +1,6 @@
 # Blackbear: a fork of openssh-portable for penetration testing purposes.
 
-Disclamer: Do not use in production or on any public facing server. Use only
+Disclamer: Do not use in production or on any public facing servers. Use only
 in penetration testing context, while participating in capture the flag 
 competitions or otherwise studying computer security. I've made modifications
 which severly degrade the security of the server. 
@@ -22,7 +22,7 @@ the client which received the connection gets a shell on the server.
 As always, reverse shell operation is meant to bypass firewall with spotty
 (if any) egress filtering.
 
-More details in slides.pdf
+Slides and videos of NSEC 2018 talk in nsec18 directory
 
 Additionnal goals:
 
